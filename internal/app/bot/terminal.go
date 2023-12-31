@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -36,15 +37,7 @@ func (t Terminal) Code(ctx context.Context, sentCode *tg.AuthSentCode) (string, 
 }
 
 func (t Terminal) Phone(_ context.Context) (string, error) {
-	if t.PhoneNumber != "" {
-		return t.PhoneNumber, nil
-	}
-	fmt.Print("Enter phone in international format (e.g. +1234567890): ")
-	phone, err := bufio.NewReader(os.Stdin).ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(phone), nil
+	return t.PhoneNumber, nil
 }
 
 func (t Terminal) Password(_ context.Context) (string, error) {
@@ -54,4 +47,34 @@ func (t Terminal) Password(_ context.Context) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(bytePwd)), nil
+}
+
+type ProcTerminal struct {
+	PhoneNumber string
+
+	FCode     chan string
+	FPassword chan string
+}
+
+func (ProcTerminal) SignUp(ctx context.Context) (auth.UserInfo, error) {
+	return auth.UserInfo{}, errors.New("signing up not implemented in Terminal")
+}
+
+func (ProcTerminal) AcceptTermsOfService(ctx context.Context, tos tg.HelpTermsOfService) error {
+	return &auth.SignUpRequired{TermsOfService: tos}
+}
+
+func (t ProcTerminal) Code(ctx context.Context, sentCode *tg.AuthSentCode) (string, error) {
+	code := <-t.FCode
+	log.Println("got code")
+	return strings.TrimSpace(code), nil
+}
+
+func (t ProcTerminal) Phone(_ context.Context) (string, error) {
+	return t.PhoneNumber, nil
+}
+
+func (t ProcTerminal) Password(_ context.Context) (string, error) {
+	password := <-t.FPassword
+	return strings.TrimSpace(password), nil
 }

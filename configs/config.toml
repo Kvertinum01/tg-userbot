@@ -1,6 +1,5 @@
 addr = ":8000"
 
 [bot]
-phones = ["+79278838338"]
 app_id = 20932168
 app_hash = "697ca50be9aa7c3a19937216a6912a42"

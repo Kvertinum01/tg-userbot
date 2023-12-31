@@ -19,6 +19,10 @@ func SetupServer(config *Config, sessions *bot.Sessions) error {
 	}
 
 	r.HandleFunc("/api/v1/create_chat", s.handleCreateChat).Methods("POST")
+	r.HandleFunc("/api/v1/send_message", s.handleSendMessage).Methods("POST")
+	r.HandleFunc("/api/v1/auth", s.handleAuth).Methods("POST")
+	r.HandleFunc("/api/v1/code", s.handleCode).Methods("POST")
+	r.HandleFunc("/api/v1/password", s.handlePassword).Methods("POST")
 
 	log.Println("Server started at", config.Addr)
 

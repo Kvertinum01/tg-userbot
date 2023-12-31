@@ -34,12 +34,14 @@ require (
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-faster/jx v1.1.0 // indirect
 	github.com/go-playground/validator/v10 v10.16.0
+	github.com/google/uuid v1.5.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gotd/contrib v0.19.0
 	github.com/gotd/neo v0.1.5 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/segmentio/asm v1.2.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0
 )

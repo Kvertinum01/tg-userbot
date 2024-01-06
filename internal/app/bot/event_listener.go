@@ -1,15 +1,13 @@
 package bot
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -55,19 +53,29 @@ func (s *Sessions) eventListener() {
 func (s *Sessions) sendMessage(ctx context.Context, api *tg.Client, newEvent EventListener) {
 	sendMessageObj := newEvent.Event.Content.(SendMessageEvent)
 
-	userData, err := findUser(ctx, api, sendMessageObj.To)
-	if err != nil {
-		s.ListenerResponse[newEvent.Event.UUID] <- err
-		return
+	var resPeer tg.InputPeerClass
+
+	resPeer = &tg.InputPeerChat{}
+
+	intValue, err := strconv.ParseInt(sendMessageObj.To, 10, 64)
+	if err == nil {
+		resPeer = &tg.InputPeerChat{ChatID: intValue}
+	} else {
+		userData, err := findUser(ctx, api, sendMessageObj.To)
+		if err != nil {
+			s.ListenerResponse[newEvent.Event.UUID] <- err
+			return
+		}
+		resPeer = &tg.InputPeerUser{
+			UserID:     userData.UserID,
+			AccessHash: userData.AccessHash,
+		}
 	}
 
 	rand.Seed(time.Now().UnixNano())
 
 	if _, err := api.MessagesSendMessage(ctx, &tg.MessagesSendMessageRequest{
-		Peer: &tg.InputPeerUser{
-			UserID:     userData.UserID,
-			AccessHash: userData.AccessHash,
-		},
+		Peer:     resPeer,
 		RandomID: rand.Int63(),
 		Message:  sendMessageObj.Message,
 	}); err != nil {
@@ -138,41 +146,9 @@ func (s *Sessions) authNewPhone(phoneNumber string) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
-		updateMessage := update.Message.(*tg.Message)
-		fromID := updateMessage.PeerID.(*tg.PeerUser).UserID
-		userData := e.Users[fromID]
+	router := routers{phoneNumber: phoneNumber, api: api}
 
-		jsonData := map[string]interface{}{
-			"phone": phoneNumber,
-			"from": map[string]string{
-				"type":     "user",
-				"username": userData.Username,
-				"phone":    userData.Phone,
-			},
-			"message": updateMessage.Message,
-		}
-
-		marshalled, err := json.Marshal(jsonData)
-		if err != nil {
-			return err
-		}
-
-		req, err := http.NewRequest(
-			"POST", "https://china118a.bpium.ru/api/webrequest/telegram_inbox",
-			bytes.NewReader(marshalled),
-		)
-		if err != nil {
-			return err
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-
-		client := http.Client{Timeout: 10 * time.Second}
-		_, err = client.Do(req)
-
-		return err
-	})
+	dispatcher.OnNewMessage(router.onMessage)
 
 	if err := waiter.Run(ctx, func(ctx context.Context) error {
 		if err := client.Run(ctx, func(ctx context.Context) error {

@@ -1,11 +1,8 @@
 package bot
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -131,41 +128,9 @@ func (s *Sessions) runPhone(phoneNumber string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
-		updateMessage := update.Message.(*tg.Message)
-		fromID := updateMessage.PeerID.(*tg.PeerUser).UserID
-		userData := e.Users[fromID]
+	router := routers{phoneNumber: phoneNumber, api: api}
 
-		jsonData := map[string]interface{}{
-			"phone": phoneNumber,
-			"from": map[string]string{
-				"type":     "user",
-				"username": userData.Username,
-				"phone":    userData.Phone,
-			},
-			"message": updateMessage.Message,
-		}
-
-		marshalled, err := json.Marshal(jsonData)
-		if err != nil {
-			return err
-		}
-
-		req, err := http.NewRequest(
-			"POST", "https://china118a.bpium.ru/api/webrequest/telegram_inbox",
-			bytes.NewReader(marshalled),
-		)
-		if err != nil {
-			return err
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-
-		client := http.Client{Timeout: 10 * time.Second}
-		_, err = client.Do(req)
-
-		return err
-	})
+	dispatcher.OnNewMessage(router.onMessage)
 
 	return waiter.Run(ctx, func(ctx context.Context) error {
 		if err := client.Run(ctx, func(ctx context.Context) error {

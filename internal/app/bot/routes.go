@@ -21,8 +21,6 @@ func (r *routers) onMessage(ctx context.Context, e tg.Entities, update *tg.Updat
 	switch v := update.Message.(type) {
 	case *tg.Message:
 		updateMessage = v
-	default:
-		return nil
 	}
 
 	switch v := updateMessage.PeerID.(type) {
@@ -68,7 +66,7 @@ func (r *routers) onMessage(ctx context.Context, e tg.Entities, update *tg.Updat
 	}
 
 	req, err := http.NewRequest(
-		"POST", "http://127.0.0.1:8080/test",
+		"POST", "https://china118a.bpium.ru/api/webrequest/telegram_inbox",
 		bytes.NewReader(marshalled),
 	)
 	if err != nil {
